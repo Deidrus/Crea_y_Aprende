@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Letras</title>
+    <style>
+        body { 
+            font-family: 'Arial', sans-serif; 
+            text-align: center; 
+            margin: 0; 
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #juego-container {
+            width: 100%;
+            height: 100%;
+            background-image: url('ninos-dibujos-animados-handdrawn-mirando-cartel-blanco-espacio-copia_283146-416.avif'); /* Ruta correcta */
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #juego {
+            width: 60%;
+            height: 60%;
+            padding: 20px;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .letter-box { 
+            display: inline-block; 
+            padding: 15px; 
+            margin: 5px; 
+            border: 1px solid #000; 
+            cursor: pointer; 
+            background-color: #ddd;
+            border-radius: 5px;
+        }
+        .letter-box.tilde {
+            background-color: #ffcccb; /* Color diferente para letras con tilde */
+        }
+        .dropzone {
+            width: 80%;
+            height: 50px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            display: flex;
+            justify-content: flex-start; /* Cambiado a flex-start para alinear a la izquierda */
+            align-items: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f9f9f9;
+            flex-wrap: wrap; /* Permitir que las letras se envuelvan */
+            position: relative; /* Para posicionar la barra guía */
+        }
+        .dropzone.over {
+            border-color: #4CAF50;
+        }
+        .result { 
+            font-weight: bold; 
+            margin-top: 20px; 
+            white-space: pre; /* Mantener los espacios en blanco */
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .barra-guia {
+            width: 2px;
+            height: 100%;
+            background-color: #000;
+            position: absolute;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="juego-container">
+        <div id="juego">
+            <div id="abecedario"></div>
+            <div class="dropzone" id="dropzone"></div>
+            <button id="confirmar">Confirmar</button>
+            <button id="clear">Depurar</button>
+            <button id="insertar-espacio">Insertar Espacio</button>
+            <div id="resultado" class="result"></div>
+            <div class="barra-guia" id="barraGuia"></div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript para manejar la lógica del juego
+        const abecedario = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚ'.split('');
+        const abecedarioDiv = document.getElementById('abecedario');
+        const dropzone = document.getElementById('dropzone');
+        const resultadoDiv = document.getElementById('resultado');
+        const barraGuia = document.getElementById('barraGuia');
+
+        abecedario.forEach(letra => {
+            const letraBox = document.createElement('div');
+            letraBox.className = 'letter-box';
+            letraBox.innerText = letra;
+            letraBox.draggable = true;
+
+            if ('ÁÉÍÓÚ'.includes(letra)) {
+                letraBox.classList.add('tilde');
+            }
+
+            letraBox.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/plain', letra);
+            });
+
+            abecedarioDiv.appendChild(letraBox);
+        });
+
+        dropzone.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            dropzone.classList.add('over');
+
+            const { clientX } = event;
+            const dropzoneRect = dropzone.getBoundingClientRect();
+            const offsetX = clientX - dropzoneRect.left;
+
+            let nearestLetterBox = null;
+            let minDistance = Infinity;
+
+            Array.from(dropzone.children).forEach(child => {
+                const childRect = child.getBoundingClientRect();
+                const childCenterX = (childRect.left + childRect.right) / 2;
+                const distance = Math.abs(clientX - childCenterX);
+
+                if (distance < minDistance) {
+                    nearestLetterBox = child;
+                    minDistance = distance;
+                }
+            });
+
+            if (nearestLetterBox) {
+                const nearestLetterBoxRect = nearestLetterBox.getBoundingClientRect();
+                const nearestLetterBoxCenterX = (nearestLetterBoxRect.left + nearestLetterBoxRect.right) / 2;
+                
+                if (clientX < nearestLetterBoxCenterX) {
+                    barraGuia.style.left = `${nearestLetterBoxRect.left - dropzoneRect.left}px`;
+                } else {
+                    barraGuia.style.left = `${nearestLetterBoxRect.right - dropzoneRect.left}px`;
+                }
+
+                barraGuia.style.display = 'block';
+            } else {
+                barraGuia.style.display = 'none';
+            }
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('over');
+            barraGuia.style.display = 'none';
+        });
+
+        dropzone.addEventListener('drop', (event) => {
+            event.preventDefault();
+            const letra = event.dataTransfer.getData('text/plain');
+            const newSpan = document.createElement('span');
+            newSpan.className = 'letter-box';
+            newSpan.innerText = letra;
+            newSpan.draggable = true;
+            
+            newSpan.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/plain', letra);
+            });
+
+            newSpan.addEventListener('click', (event) => {
+                if (event.ctrlKey) {
+                    dropzone.removeChild(newSpan);
+                }
+            });
+
+            const { clientX } = event;
+            const dropzoneRect = dropzone.getBoundingClientRect();
+            const offsetX = clientX - dropzoneRect.left;
+
+            let inserted = false;
+
+            Array.from(dropzone.children).forEach(child => {
+                const childRect = child.getBoundingClientRect();
+                const childCenterX = (childRect.left + childRect.right) / 2;
+
+                if (!inserted && clientX < childCenterX) {
+                    dropzone.insertBefore(newSpan, child);
+                    inserted = true;
+                }
+            });
+
+            if (!inserted) {
+                dropzone.appendChild(newSpan);
+            }
+
+            dropzone.classList.remove('over');
+            barraGuia.style.display = 'none';
+        });
+
+        document.getElementById('confirmar').addEventListener('click', () => {
+            if (dropzone.innerText !== '') {
+                resultadoDiv.innerHTML = '';
+                dropzone.childNodes.forEach(node => {
+                    const span = document.createElement('span');
+                    span.className = 'animated-color';
+                    span.innerHTML = node.innerHTML === '&nbsp;' ? ' ' : node.innerHTML;
+                    resultadoDiv.appendChild(span);
+                });
+            }
+        });
+
+        document.getElementById('clear').addEventListener('click', () => {
+            dropzone.innerHTML = '';
+            resultadoDiv.innerHTML = '';
+        });
+
+        document.getElementById('insertar-espacio').addEventListener('click', () => {
+            const space = document.createElement('span');
+            space.className = 'letter-box';
+            space.innerHTML = '&nbsp;';
+            space.draggable = true;
+
+            space.addEventListener('dragstart', (event) => {
+                event.dataTransfer.setData('text/plain', ' ');
+            });
+
+            dropzone.appendChild(space);
+        });
+
+        // Animación RGB para el texto
+        const styles = `
+            @keyframes rainbow {
+                0% { color: red; }
+                16% { color: orange; }
+                32% { color: yellow; }
+                48% { color: green; }
+                64% { color: blue; }
+                80% { color: indigo; }
+                100% { color: violet; }
+            }
+            .animated-color {
+                animation: rainbow 1s infinite;
+                font-size: 40px; /* Cambia el tamaño de la fuente según sea necesario */
+            }
+        `;
+        const styleSheet = document.createElement("style");
+        styleSheet.type = "text/css";
+        styleSheet.innerText = styles;
+        document.head.appendChild(styleSheet);
+    </script>
+</body>
+</html>
